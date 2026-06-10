@@ -1,0 +1,230 @@
+# 09. Implementation Progress
+
+## Status Summary
+
+Backend implementation has progressed through Step 10 of the MVP implementation plan.
+Step 11 has started with an Android client MVP skeleton.
+
+Completed:
+
+- Step 1: Project Skeleton
+- Step 2: Metadata Schema
+- Step 3: Session API
+- Step 4: Capability Registration and Search Space Creation
+- Step 5: OptimizerService
+- Step 6: Trial Assignment API
+- Step 7: Trial Result Upload
+- Step 8: EvaluationService
+- Step 9: Baseline Selection
+- Step 10: Pareto Calculation and ReportService
+
+Not started:
+
+- Step 12: Closed-loop Integration
+- Step 13: RAG Agent
+
+Started:
+
+- Step 11: Android Client MVP
+
+## Current Verification
+
+Current backend test command:
+
+```sh
+./scripts/test.sh
+```
+
+Latest verified result:
+
+```text
+Ran 59 tests
+OK
+```
+
+The project is configured to run through `.venv/bin/python` only.
+
+Current Android verification status:
+
+- A physical Android device connection was attempted by the user.
+- The current shell cannot verify the device because `adb` is not available on `PATH`.
+- Android CLI build/install is also blocked in this environment because `gradle` and `sdkmanager` are not available on `PATH`.
+- Helper scripts were added so the next environment check is explicit:
+  - `./scripts/check_android_tools.sh`
+  - `./scripts/run_server_for_device.sh`
+
+## Implemented Backend Surface
+
+HTTP endpoints currently implemented:
+
+- `GET /health`
+- `POST /sessions`
+- `GET /sessions/{session_id}`
+- `GET /sessions/{session_id}/constraints`
+- `POST /sessions/{session_id}/capabilities`
+- `GET /sessions/{session_id}/trials/next`
+- `POST /sessions/{session_id}/trials/{trial_id}/result`
+- `POST /sessions/{session_id}/trials/{trial_id}/failure`
+- `GET /sessions/{session_id}/report`
+
+Implemented services:
+
+- `SessionService`
+- `ConstraintFilter`
+- `SearchSpaceBuilder`
+- `OptimizerService`
+- `TrialService`
+- `EvaluationService`
+- `BaselineService`
+- `ReportService`
+
+Implemented storage:
+
+- SQLite-backed `MetadataStore`
+- Filesystem-backed `ArtifactStore`
+
+Implemented Android client skeleton:
+
+- Gradle Android application project under `android-client/`
+- `CapabilityReporter`
+- `EncoderParameterProxy`
+- `NoOpExtensionStrategy`
+- `TrialRunner`
+- `SyntheticSurfaceSourceEncoder`
+- Minimal `MainActivity` manual runner with session creation, capability registration, and one-trial execution
+- Multipart artifact upload client
+- Device-access backend helper script: `scripts/run_server_for_device.sh`
+- Android tool/device check helper script: `scripts/check_android_tools.sh`
+
+## Step Notes
+
+### Step 1: Project Skeleton
+
+Implemented backend package layout, `.venv`-based scripts, standard-library HTTP server, `/health`, and SQLite initialization.
+
+Note: FastAPI remains declared in `pyproject.toml`, but the current Step 1-10 implementation uses the Python standard library HTTP server because the local system lacks complete `python3.14-venv`/pip bootstrap support.
+
+### Step 2: Metadata Schema
+
+Implemented SQLite tables for sessions, devices, capabilities, search spaces, constraint decisions, trials, observations, optimizer recommendations, and report metadata.
+
+JSON round-trip behavior is covered by tests for requested params, applied params, raw payloads, recommendation metadata, and report metadata.
+
+### Step 3: Session API
+
+Implemented session create/read, constraints read, and clear trial-generation error before capability registration.
+
+Session status includes trial counts and current search space version.
+
+### Step 4: Capability Registration and Search Space Creation
+
+Implemented capability registration, default MVP search space creation, constraint decision storage, and transition to `ready`.
+
+Default search space:
+
+- `bitrate_kbps`: `1000-12000`
+- `i_frame_interval_sec`: `1-5`
+- `profile`: values reported by capability only
+
+MVP-excluded parameters are stored as rejected constraint decisions.
+
+### Step 5: OptimizerService
+
+Implemented deterministic cold-start recommendation generation.
+
+Current behavior:
+
+- Avoids duplicate recommendations.
+- Avoids failed parameter combinations.
+- Avoids evaluated parameter combinations.
+- Stores recommendations with `phase`, `seed`, and `search_space_version`.
+
+### Step 6: Trial Assignment API
+
+Implemented trial assignment through `GET /sessions/{session_id}/trials/next`.
+
+The backend now creates assigned trials, links optimizer recommendations, stores search space version, and transitions sessions to `running`.
+
+### Step 7: Trial Result Upload
+
+Implemented multipart trial result upload and JSON failure reporting.
+
+Artifacts are stored under:
+
+```text
+artifacts/{session_id}/trials/{trial_id}/
+```
+
+Stored files:
+
+- `output.h264`
+- `requested_params.json`
+- `applied_params.json`
+- `encoder_log.json`
+
+Failure handling marks the trial and linked optimizer recommendation as failed without failing the session.
+
+### Step 8: EvaluationService
+
+Implemented mock and real evaluator boundaries.
+
+Current behavior:
+
+- Missing artifact is recorded as evaluation failure.
+- Mock evaluator creates bitrate/VMAF observations and supports a 15-trial lifecycle test.
+- Real evaluator preserves command/stdout/stderr/returncode logs on failure.
+
+### Step 9: Baseline Selection
+
+Implemented baseline selection.
+
+Priority:
+
+1. First Android default encoder settings trial.
+2. Evaluated cold-start trial closest to center bitrate.
+
+The selected baseline updates `session.baseline_trial_id`, marks the baseline observation, and records the selection reason in report metadata.
+
+Session completion is guarded so a session cannot become `completed` without a baseline observation.
+
+### Step 10: Pareto Calculation and ReportService
+
+Implemented Pareto Set calculation, VMAF-bitrate plot data generation, baseline comparison, Markdown report generation, and `GET /sessions/{session_id}/report`.
+
+Reports are saved to:
+
+```text
+artifacts/{session_id}/report.md
+```
+
+The report includes:
+
+- Session metadata
+- Device and capability summary
+- Search space and excluded parameters
+- Trial result table
+- Requested/applied parameter comparison
+- Observation table
+- Pareto Set
+- Baseline comparison
+- Optimizer recommendation audit trail
+- Failed trial summary
+
+## Known Gaps
+
+- Android client has not been compiled in this environment.
+- `adb`, `gradle`, and `sdkmanager` were not available on the current shell `PATH`.
+- End-to-end real Android encoding has not been verified.
+- One real Android device artifact upload has not been verified.
+- Android client currently uses a synthetic smoke-test source, not the final target input video source.
+- Real VMAF parsing is not implemented; real evaluator currently preserves failure logs.
+- RAG agent implementation has not started.
+- FastAPI dependency is declared but not currently used by the running server.
+
+## Recommended Next Step
+
+Choose one of these paths:
+
+1. Finish Step 11 by making Android SDK tools available on `PATH`, compiling the Android project, and running one real-device upload.
+2. Implement a backend-only Step 12 mock closed-loop integration while Android device access is pending.
+3. Revisit the backend server framework and switch from the current standard-library server to FastAPI once `.venv`/pip bootstrap is fixed.

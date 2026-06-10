@@ -15,6 +15,7 @@
 | 6 | [06_verification_plan.md](06_verification_plan.md) | 테스트, 실험 검증, 리포트 산출 기준 정의 |
 | 7 | [07_risk_and_roadmap.md](07_risk_and_roadmap.md) | 주요 리스크, 완화 전략, MVP 이후 확장 계획 정의 |
 | 8 | [08_implementation_plan.md](08_implementation_plan.md) | MVP 구현 순서, API, 테스트 계획 정의 |
+| 9 | [09_implementation_progress.md](09_implementation_progress.md) | 구현 진행 상태, 검증 결과, 다음 단계 기록 |
 
 ## 참조 ADR
 
