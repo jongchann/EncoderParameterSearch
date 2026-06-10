@@ -14,6 +14,7 @@
 | 5 | [05_algorithm_and_rag_design.md](05_algorithm_and_rag_design.md) | parameter search, constraint filter, RAG 보조 흐름 설계 |
 | 6 | [06_verification_plan.md](06_verification_plan.md) | 테스트, 실험 검증, 리포트 산출 기준 정의 |
 | 7 | [07_risk_and_roadmap.md](07_risk_and_roadmap.md) | 주요 리스크, 완화 전략, MVP 이후 확장 계획 정의 |
+| 8 | [08_implementation_plan.md](08_implementation_plan.md) | MVP 구현 순서, API, 테스트 계획 정의 |
 
 ## 참조 ADR
 
