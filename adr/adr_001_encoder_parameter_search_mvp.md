@@ -36,6 +36,8 @@ MVP의 기본 탐색 변수는 다음으로 제한한다.
 - B-frame count, 단 기기 지원 시에만 사용
 - Vendor extension key, 단 allowlist에 포함되고 기기 지원이 확인된 경우에만 사용
 
+Scope note: ADR 002에서 1차 MVP 탐색 변수는 `bitrate`, `i_frame_interval`, capability-supported `profile`로 더 좁혀졌다. 이 ADR의 B-frame과 vendor extension key는 기본 아키텍처가 수용해야 하는 확장 후보로 남기고, 1차 구현의 core path에는 포함하지 않는다.
+
 Android 쪽 encoder 제어는 Proxy Pattern을 사용해 `MediaCodec` 설정과 backend parameter 주입을 분리한다. Vendor별 extension key 처리는 Strategy Pattern으로 분리해 Qualcomm, Exynos, MediaTek 등 AP별 차이를 런타임에 교체할 수 있게 한다.
 
 RAG는 MVP에 포함하되 최적화 보조 계층으로 제한한다. Android CDD, vendor codec 문서, MediaCodec 문서, 과거 benchmark 결과를 조회할 수 있는 knowledge provider를 두고, LLM은 이 검색 결과를 바탕으로 unsupported parameter 제거 근거와 결과 리포트를 생성한다. Fine-tuning은 MVP에서 제외하고, 충분한 benchmark 데이터가 축적된 뒤 별도 결정으로 다룬다.

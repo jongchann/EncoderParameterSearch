@@ -21,6 +21,17 @@
           +----------------+   +--------------+   +------------------+
 ```
 
+## Architecture decision map
+
+| 결정 | 선택한 구조 | 비교한 대안 | 선택 이유 |
+| --- | --- | --- | --- |
+| 실행 위치 분리 | Android encode + backend evaluation/optimization | Android all-in-one, backend simulation only | 실제 hardware encoder를 검증하면서 VMAF/AI 비용은 backend로 분리한다. |
+| AI 책임 경계 | Optimizer와 RAG Agent 분리 | LLM direct parameter recommendation | 수치 결정의 재현성과 AI 설명력을 동시에 확보한다. |
+| Safety gate | ConstraintFilter가 search space와 recommendation을 검증 | RAG/optimizer output 직접 전달 | unsupported parameter와 hallucination이 Android action으로 이어지지 않게 한다. |
+| 저장 구조 | MetadataStore + ArtifactStore 분리 | file-only log, full event sourcing | MVP 구현 가능성과 audit trail의 균형을 맞춘다. |
+| Android mapping | EncoderParameterProxy와 VendorExtensionStrategy | API 호출부에 직접 mapping | backend schema와 Android `MediaFormat` 결합도를 낮춘다. |
+| Report 구조 | raw metric, derived result, AI narrative 분리 | metric-only report, LLM-only report | 결과의 설명력과 신뢰도를 함께 유지한다. |
+
 ## 책임 분리
 
 ### Android Client

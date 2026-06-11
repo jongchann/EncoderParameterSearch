@@ -55,6 +55,11 @@ Current Android verification status:
   - `./scripts/check_android_tools.sh`
   - `./scripts/run_server_for_device.sh`
 
+Design-to-implementation gap tracking:
+
+- The current follow-up implementation gaps are tracked in [14_implementation_gap_review.md](14_implementation_gap_review.md).
+- The highest-priority backend gaps before Step 12 are upload-to-evaluation linkage and stronger session completion gates.
+
 ## Implemented Backend Surface
 
 HTTP endpoints currently implemented:
@@ -237,6 +242,8 @@ Current verification:
 
 ## Known Gaps
 
+- Uploading a trial result currently stores the artifact and metadata, but the HTTP flow does not yet trigger evaluation automatically.
+- Session completion currently requires a baseline observation, but the stricter documented gates for minimum evaluated trial count, report generation, and `completed_at` still need implementation.
 - Android client has not been compiled in this environment.
 - `adb`, `gradle`, and `sdkmanager` were not available on the current shell `PATH`.
 - Android mock mode has not yet been opened in Android Studio or on a device/emulator from this shell.
@@ -245,13 +252,16 @@ Current verification:
 - Android client currently uses a synthetic smoke-test source, not the final target input video source.
 - Real VMAF parsing is not implemented; real evaluator currently preserves failure logs.
 - RAG agent implementation has not started.
+- `RagOutput` and `AiOpsEvent` are documented design targets but are not implemented yet.
+- Report trust-level sections and AI-Ops version metadata are documented design targets but are not implemented yet.
 - FastAPI dependency is declared but not currently used by the running server.
 
 ## Recommended Next Step
 
 Choose one of these paths:
 
-1. Open `android-client/` in Android Studio and run the app with `Mock mode` enabled to visually confirm the button flow and JSON result display.
-2. Finish Step 11 by making Android SDK tools available on `PATH`, compiling the Android project, and running one real-device upload with `Mock mode` disabled.
-3. Implement a backend-only Step 12 mock closed-loop integration while Android device access is pending.
-4. Revisit the backend server framework and switch from the current standard-library server to FastAPI once `.venv`/pip bootstrap is fixed.
+1. Implement a backend-only Step 12 mock closed-loop integration, starting with upload-to-evaluation linkage and stronger completion gates.
+2. Open `android-client/` in Android Studio and run the app with `Mock mode` enabled to visually confirm the button flow and JSON result display.
+3. Finish Step 11 by making Android SDK tools available on `PATH`, compiling the Android project, and running one real-device upload with `Mock mode` disabled.
+4. Start Step 13 by adding `RagOutput`, `AiOpsEvent`, and guardrail tests after the closed-loop path is stable.
+5. Revisit the backend server framework and switch from the current standard-library server to FastAPI once `.venv`/pip bootstrap is fixed.

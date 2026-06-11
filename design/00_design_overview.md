@@ -42,6 +42,8 @@ MVP에서 제외하는 범위는 다음과 같다.
 - 최종 parameter 후보가 어떤 trial, observation, constraint decision을 거쳐 선택됐는지 역추적할 수 있는가
 - AI guardrails가 RAG output, optimizer recommendation, report narrative에 각각 적용되는가
 - AI-Ops 관점에서 prompt/source/search space/evaluator/report version이 남는가
+- 각 FR이 어떤 후보군과 trade-off 검토를 거쳐 현재 설계로 결정됐는가
+- 각 NFR이 어떤 품질 속성 trade-off를 거쳐 architecture decision으로 반영됐는가
 - MVP 범위를 현실적으로 제한하면서도 H.265, QP, vendor extension key, 다중 기기로 확장 가능한가
 - 현재 구현된 기능과 목표 설계가 문서에서 구분되는가
 
@@ -87,6 +89,8 @@ ADR 001, ADR 002에 따라 다음 결정을 따른다.
 8. 구현 계획과 진행 상태
 9. 전체 설계 리뷰와 발전 방향
 10. AI guardrails와 AI-Ops 적용 범위
+11. FR별 후보 비교와 결정 근거
+12. NFR별 후보 비교와 품질 속성 trade-off
 
 ## 산출물 완료 기준
 
@@ -98,3 +102,5 @@ ADR 001, ADR 002에 따라 다음 결정을 따른다.
 - API와 데이터 모델이 requested/applied parameter, observation, artifact를 분리해서 표현한다.
 - Optimizer와 RAG Agent의 입출력 계약이 정의되어 있다.
 - 검증 계획이 단위, 통합, 실험, 리포트 검증을 포함한다.
+- FR별 주요 후보, 장단점, 선택 이유가 decision matrix로 추적된다.
+- NFR별 품질 속성 trade-off와 architecture decision 근거가 decision matrix로 추적된다.

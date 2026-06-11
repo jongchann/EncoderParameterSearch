@@ -18,6 +18,9 @@
 | 9 | [09_implementation_progress.md](09_implementation_progress.md) | 구현 진행 상태, 검증 결과, 다음 단계 기록 |
 | 10 | [10_design_review_and_evolution.md](10_design_review_and_evolution.md) | 전체 설계 리뷰, AI 책임 경계, 발전 우선순위 정리 |
 | 11 | [11_ai_guardrails_and_aiops.md](11_ai_guardrails_and_aiops.md) | AI guardrails, AI-Ops 적용 가능성, 운영 기준 정리 |
+| 12 | [12_fr_decision_matrix.md](12_fr_decision_matrix.md) | FR별 설계 후보, 장단점, 최종 결정 근거 정리 |
+| 13 | [13_nfr_decision_matrix.md](13_nfr_decision_matrix.md) | NFR별 설계 후보, 품질 속성 trade-off, 최종 결정 근거 정리 |
+| 14 | [14_implementation_gap_review.md](14_implementation_gap_review.md) | 설계 강화 이후 현재 구현 gap과 후속 작업 우선순위 정리 |
 
 ## 추천 읽기 순서
 
@@ -30,6 +33,9 @@
 5. [09_implementation_progress.md](09_implementation_progress.md): 현재 구현 상태
 6. [10_design_review_and_evolution.md](10_design_review_and_evolution.md): 설계 리뷰와 다음 발전 방향
 7. [11_ai_guardrails_and_aiops.md](11_ai_guardrails_and_aiops.md): AI guardrails와 AI-Ops 적용 범위
+8. [12_fr_decision_matrix.md](12_fr_decision_matrix.md): FR별 후보 비교와 결정 근거
+9. [13_nfr_decision_matrix.md](13_nfr_decision_matrix.md): NFR별 후보 비교와 품질 속성 trade-off
+10. [14_implementation_gap_review.md](14_implementation_gap_review.md): 구현 gap과 다음 작업 우선순위
 
 ## 참조 ADR
 
@@ -45,3 +51,6 @@
 - 목표 설계와 현재 구현 상태를 분리해 기록한다.
 - AI guardrails는 RAG schema, source validation, ConstraintFilter, report trust level로 구현한다.
 - AI-Ops는 prompt/source/search space/evaluator/report versioning과 session-level telemetry에서 경량으로 시작한다.
+- 주요 FR은 후보군의 장단점과 최종 선택 근거를 함께 기록한다.
+- 주요 NFR은 품질 속성별 trade-off와 architecture decision 근거를 함께 기록한다.
+- 설계와 구현의 차이는 gap review 문서에 기록하고 Step별 후속 작업으로 연결한다.

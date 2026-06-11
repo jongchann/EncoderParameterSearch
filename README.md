@@ -17,6 +17,9 @@ Encoder Parameter Search는 Android hardware encoder의 parameter를 backend clo
 - [09_implementation_progress.md](design/09_implementation_progress.md): 현재 구현 상태
 - [10_design_review_and_evolution.md](design/10_design_review_and_evolution.md): 전체 설계 리뷰와 발전 방향
 - [11_ai_guardrails_and_aiops.md](design/11_ai_guardrails_and_aiops.md): AI guardrails와 AI-Ops 적용 범위
+- [12_fr_decision_matrix.md](design/12_fr_decision_matrix.md): FR별 후보 비교와 결정 근거
+- [13_nfr_decision_matrix.md](design/13_nfr_decision_matrix.md): NFR별 후보 비교와 품질 속성 trade-off
+- [14_implementation_gap_review.md](design/14_implementation_gap_review.md): 현재 구현 gap과 후속 작업 우선순위
 
 ## Current Status
 
