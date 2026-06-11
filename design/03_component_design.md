@@ -160,6 +160,8 @@ Encoded artifact의 bitrate와 VMAF를 측정한다.
 - 측정 로그 저장
 - Observation 생성
 
+MVP는 mock evaluator와 real evaluator 경계를 분리한다. Mock evaluator는 lifecycle test를 안정적으로 수행하기 위한 것이고, real evaluator는 `ffmpeg`/`libvmaf` 실행 로그와 실패 정보를 보존한다.
+
 ### OptimizerService
 
 다음 trial parameter를 추천한다.
@@ -184,6 +186,33 @@ MVP 동작:
 - Recommended parameter
 - Recommendation metadata
 
+초기 구현은 deterministic cold-start recommendation으로 closed-loop를 검증하고, 이후 NSGA-II 또는 동등한 multi-objective optimizer로 확장한다.
+
+### BaselineService
+
+Baseline 비교 기준을 선택하고 session completion gate를 관리한다.
+
+책임:
+
+- Android default trial 우선 선택
+- 없으면 cold-start trial 중 중심 bitrate에 가까운 observation 선택
+- Baseline selection reason 저장
+- Baseline observation 없이 session이 `completed`가 되지 않도록 방어
+
+### ReportService
+
+Session 종료 또는 조회 시 결과 report를 생성한다.
+
+책임:
+
+- Pareto Set 계산
+- VMAF-bitrate plot data 생성
+- Baseline comparison 생성
+- Trial result table과 requested/applied 비교 생성
+- Optimizer recommendation audit trail 포함
+- RAG narrative가 있는 경우 raw metric과 구분해 포함
+- AI guardrail pass/block와 AI-Ops metadata를 report trust level과 함께 표시
+
 ### RagAgentService
 
 문서와 observation 기반 설명을 생성한다.
@@ -196,6 +225,22 @@ MVP 동작:
 - 최종 리포트 초안 생성
 
 출력은 JSON schema를 우선 사용하고, 사람이 읽는 설명은 report 생성 단계에서 Markdown으로 변환한다.
+
+RagAgentService는 `RagOutput`을 저장하지만, search space를 직접 변경하지 않는다. Constraint 후보는 반드시 `ConstraintFilter`가 accepted/rejected decision으로 확정해야 한다.
+
+### AiOpsTelemetry
+
+MVP에서는 별도 service 대신 MetadataStore와 ArtifactStore에 경량 event를 남기는 형태로 시작한다.
+
+책임:
+
+- Prompt version, retrieval corpus version, retrieval snapshot path 기록
+- Guardrail pass/block event 기록
+- Optimizer phase, seed, recommendation status 기록
+- Evaluator mode와 failure log 연결
+- Report trust level과 source coverage 요약
+
+후속 확장에서 session 수와 provider 수가 늘어나면 독립 service나 dashboard로 분리한다.
 
 ## 저장소 컴포넌트
 
@@ -219,6 +264,7 @@ SQLite 또는 동등한 경량 DB를 사용한다.
 - Search space version
 - Optimizer recommendation history
 - Baseline selection
+- AI-Ops event 또는 equivalent report metadata
 
 ### ArtifactStore
 

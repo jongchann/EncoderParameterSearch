@@ -110,6 +110,8 @@ RAG Agent는 다음 작업을 보조해야 한다.
 - 수용 기준: source reference가 없는 constraint candidate는 search space에 반영되지 않는다.
 - 수용 기준: RAG Agent는 최종 parameter를 직접 결정하지 않는다.
 - 수용 기준: RAG Agent 실패는 optimizer loop를 중단시키지 않는다.
+- 수용 기준: RAG output은 output type, prompt version, source reference, retrieval snapshot metadata와 함께 저장된다.
+- 수용 기준: RAG narrative는 raw metric 또는 Pareto result와 구분되어 report에 표시된다.
 
 ### FR-008 결과 리포트
 
@@ -131,6 +133,8 @@ Backend는 session 종료 시 다음 결과를 생성해야 한다.
 - 수용 기준: BD-Rate 계산이 불충분하면 VMAF-bitrate table/plot 비교를 대체 지표로 명시한다.
 - 수용 기준: failed trial이 있으면 실패 유형과 원인 후보를 포함한다.
 - 수용 기준: 최종 후보가 LLM 단독 출력이 아니라 optimizer와 ConstraintFilter를 거쳤다는 audit trail을 포함한다.
+- 수용 기준: report는 raw metric, deterministic derived result, AI-assisted narrative를 구분한다.
+- 수용 기준: source reference가 없는 RAG 문장은 최종 결론의 근거로 표시하지 않는다.
 
 ### FR-009 Audit trail
 
@@ -180,6 +184,7 @@ LLM/RAG 출력과 unsupported parameter가 직접 encoder 설정으로 이어지
 - 기준: optimizer recommendation은 trial assignment 전에 ConstraintFilter를 통과한다.
 - 기준: allowlist에 없는 vendor extension key는 Android client로 전달되지 않는다.
 - 기준: LLM 출력만으로 search space를 확장하지 않는다.
+- 기준: RAG prompt version과 retrieval snapshot을 남겨 AI 설명을 재검토할 수 있어야 한다.
 
 ### NFR-003 구현 가능성
 
@@ -220,6 +225,16 @@ Vendor별 extension key 처리는 Strategy Pattern으로 분리한다.
 - 기준: search space가 비거나 objective 계산이 반복 실패하는 경우에만 session 조기 종료를 허용한다.
 - 기준: 조기 종료 시에도 실패 report를 생성한다.
 
+### NFR-007 AI guardrails와 AI-Ops
+
+RAG Agent와 optimizer 변경이 실제 encoder action과 report 신뢰도에 미치는 영향을 통제하고 추적할 수 있어야 한다.
+
+- 기준: RAG output은 schema validation, source validation, action validation, report trust-level validation을 거친다.
+- 기준: guardrail을 통과하지 못한 output은 Android client로 전달되지 않는다.
+- 기준: prompt version, retrieval snapshot, search space version, optimizer phase, evaluator mode, report template version을 session 단위로 추적한다.
+- 기준: RAG 또는 optimizer 변경 후 release gate를 통과하지 못하면 이전 version으로 rollback할 수 있어야 한다.
+- 기준: AI-assisted narrative는 raw metric 또는 deterministic derived result와 구분되어 표시된다.
+
 ## MVP 성공 기준
 
 - 하나의 Android 기기에서 하나의 H.264/AVC codec 대상으로 실험한다.
@@ -232,6 +247,8 @@ Vendor별 extension key 처리는 Strategy Pattern으로 분리한다.
 - Baseline 대비 bitrate 감소 또는 VMAF 개선 사례를 제시한다.
 - RAG Agent가 constraint 후보, 제외 사유, trial 요약, 최종 결과 설명을 생성한다.
 - 최종 parameter가 LLM 단독 출력이 아니라 constraint filter와 optimizer를 거쳐 선택되었음이 로그로 확인된다.
+- AI guardrail 위반이 search space 변경이나 Android trial assignment로 이어지지 않는다.
+- Prompt/source/optimizer/evaluator version이 final report 또는 metadata에서 확인된다.
 
 ## 요구사항 추적성
 
@@ -243,7 +260,8 @@ Vendor별 extension key 처리는 Strategy Pattern으로 분리한다.
 | FR-004 Trial parameter 추천 | [05](05_algorithm_and_rag_design.md) | OptimizerService 단위 테스트 |
 | FR-005 Encoding trial 실행 | [02](02_system_architecture.md), [03](03_component_design.md) | Android 수동/E2E 테스트 |
 | FR-006 평가 | [03](03_component_design.md), [04](04_data_api_design.md) | EvaluationService 단위 테스트 |
-| FR-007 RAG Agent 보조 | [05](05_algorithm_and_rag_design.md) | RAG output schema 테스트 |
-| FR-008 결과 리포트 | [06](06_verification_plan.md) | Report checklist |
+| FR-007 RAG Agent 보조 | [04](04_data_api_design.md), [05](05_algorithm_and_rag_design.md), [10](10_design_review_and_evolution.md) | RAG output schema 테스트 |
+| FR-008 결과 리포트 | [06](06_verification_plan.md), [10](10_design_review_and_evolution.md) | Report checklist |
 | FR-009 Audit trail | [04](04_data_api_design.md), [06](06_verification_plan.md) | Audit log 조회 테스트 |
 | FR-010 Baseline 실행 | [05](05_algorithm_and_rag_design.md), [06](06_verification_plan.md) | Baseline 비교 검증 |
+| NFR-007 AI guardrails와 AI-Ops | [06](06_verification_plan.md), [11](11_ai_guardrails_and_aiops.md) | Guardrail/release gate 테스트 |

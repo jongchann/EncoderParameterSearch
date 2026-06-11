@@ -102,6 +102,47 @@
 | `status` | `accepted`, `rejected`, `evaluated`, `failed` |
 | `metadata` | optimizer score, seed, generation 등 |
 
+### RagOutput
+
+Step 13에서 추가할 RAG 출력 저장 모델이다. RAG 출력은 search space에 직접 반영되지 않고, `ConstraintFilter`가 별도 `ConstraintDecision`으로 확정한 경우에만 optimizer domain에 영향을 준다.
+
+| 필드 | 설명 |
+| --- | --- |
+| `rag_output_id` | RAG 출력 식별자 |
+| `session_id` | Session 식별자 |
+| `trial_id` | 관련 trial이 있는 경우의 trial 식별자 |
+| `output_type` | `constraint_candidate`, `failure_analysis`, `report_section` |
+| `payload` | schema 검증을 통과한 RAG JSON 출력 |
+| `sources` | source reference 목록 |
+| `prompt_version` | Prompt template version |
+| `retrieval_snapshot_path` | 검색 결과 snapshot artifact path |
+| `status` | `recorded`, `ignored`, `used_in_report`, `used_as_constraint_candidate` |
+| `created_at` | 생성 시각 |
+
+### ReportMetadata
+
+| 필드 | 설명 |
+| --- | --- |
+| `report_id` | Report metadata 식별자 |
+| `session_id` | Session 식별자 |
+| `report_path` | Markdown 또는 기타 report artifact path |
+| `metadata` | baseline selection, report type, source summary 등 |
+| `created_at` | 생성 시각 |
+
+### AiOpsEvent
+
+MVP에서는 별도 observability platform 대신 metadata 또는 JSON artifact로 AI-Ops 이벤트를 남긴다. 구현 초기에는 `report_metadata.metadata`나 artifact JSON으로 대체할 수 있고, RAG/optimizer 운영이 커지면 별도 table로 승격한다.
+
+| 필드 | 설명 |
+| --- | --- |
+| `event_id` | AI-Ops event 식별자 |
+| `session_id` | Session 식별자 |
+| `component` | `rag`, `constraint_filter`, `optimizer`, `evaluator`, `report` |
+| `event_type` | `guardrail_passed`, `guardrail_blocked`, `version_recorded`, `quality_metric` 등 |
+| `severity` | `info`, `warning`, `error` |
+| `payload` | prompt version, source coverage, rejected count, evaluator mode 등 |
+| `created_at` | 생성 시각 |
+
 ## Parameter schema
 
 ### 1차 MVP parameter
@@ -129,6 +170,39 @@
 ```
 
 확장 parameter는 capability와 allowlist 검증을 통과한 경우에만 search space에 포함한다.
+
+## Source reference schema
+
+RAG와 constraint decision은 같은 source reference 형식을 사용한다.
+
+```json
+{
+  "source_id": "android-mediaformat-profile",
+  "source_type": "document",
+  "title": "Android MediaFormat",
+  "section": "KEY_PROFILE",
+  "uri": "local-corpus/android/mediaformat.md",
+  "retrieval_score": 0.87,
+  "retrieved_at": "2026-06-11T00:00:00Z"
+}
+```
+
+Trial observation을 근거로 사용할 때는 다음 형식을 사용한다.
+
+```json
+{
+  "source_id": "trial_log:trial_010",
+  "source_type": "observation",
+  "trial_id": "trial_010",
+  "artifact_path": "artifacts/sess_001/trials/trial_010/encoder_log.json"
+}
+```
+
+원칙:
+
+- `sources`가 비어 있는 RAG output은 report의 신뢰 근거로 쓰지 않는다.
+- `constraint_candidate`가 source reference를 갖더라도 `ConstraintFilter` 검증 전에는 search space를 변경하지 않는다.
+- `retrieval_snapshot_path`는 나중에 같은 RAG 결론을 재검토할 수 있도록 저장한다.
 
 ## API 설계
 
@@ -317,6 +391,10 @@ artifacts/
     rag/
       constraint_sources.json
       report_sources.json
+      rag_outputs.json
+      retrieval_snapshots/
+    ops/
+      aiops_events.json
     optimizer/
       recommendations.json
     report.md

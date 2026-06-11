@@ -361,14 +361,20 @@ Rules:
 
 - Reject constraint candidates without source references.
 - Store RAG output in `RagOutput` or an equivalent metadata model.
+- Store prompt version and retrieval snapshot metadata for each RAG output.
 - RAG must not directly choose final parameters.
 - RAG failure must not stop the optimizer loop.
+- Report must separate raw metrics, deterministic derived results, and RAG-assisted narrative.
+- Guardrail block events should be stored as metadata or artifact JSON.
+- Prompt, source, optimizer, evaluator, and report versions should be visible in report metadata.
 
 Completion criteria:
 
 - Source-less RAG constraints are not reflected in search space.
 - Report includes RAG explanation and source references.
 - Constraint decisions still record the filter's final accepted or rejected result.
+- RAG output can be traced back to prompt version and retrieved sources.
+- AI guardrail release gate passes on a fixed mock session fixture.
 
 ## Public Interfaces
 
@@ -411,6 +417,8 @@ Unit tests:
 - `OptimizerService` avoids failed parameters.
 - `EvaluationService` handles missing artifacts and ffmpeg failure.
 - `ReportService` includes Pareto Set, baseline, and audit trail.
+- AI guardrail tests block schema-invalid and source-less RAG output.
+- AI-Ops metadata records prompt/source/search-space/evaluator/report versions.
 
 Integration tests:
 

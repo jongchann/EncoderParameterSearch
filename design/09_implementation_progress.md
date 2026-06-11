@@ -46,6 +46,8 @@ The project is configured to run through `.venv/bin/python` only.
 
 Current Android verification status:
 
+- Android app mock mode was added so the manual UI flow can be checked without a backend server, Android encoder, or artifact upload.
+- The mock flow displays each button result as formatted JSON on screen.
 - A physical Android device connection was attempted by the user.
 - The current shell cannot verify the device because `adb` is not available on `PATH`.
 - Android CLI build/install is also blocked in this environment because `gradle` and `sdkmanager` are not available on `PATH`.
@@ -91,7 +93,9 @@ Implemented Android client skeleton:
 - `NoOpExtensionStrategy`
 - `TrialRunner`
 - `SyntheticSurfaceSourceEncoder`
+- `AppClient`, `NetworkAppClient`, and `MockAppClient` to switch between real backend execution and local mock UI verification
 - Minimal `MainActivity` manual runner with session creation, capability registration, and one-trial execution
+- `MainActivity` result display that shows the latest response or failure message on screen
 - Multipart artifact upload client
 - Device-access backend helper script: `scripts/run_server_for_device.sh`
 - Android tool/device check helper script: `scripts/check_android_tools.sh`
@@ -210,10 +214,32 @@ The report includes:
 - Optimizer recommendation audit trail
 - Failed trial summary
 
+### Step 11: Android Client MVP
+
+Implemented a manual Android smoke-test app under `android-client/`.
+
+Current behavior:
+
+- The app can create a session, register AVC encoder capability, and run one trial through button actions.
+- `Mock mode` is enabled by default so the UI can be checked without backend or encoder dependencies.
+- In mock mode:
+  - `Create session` returns `mock_sess_001`.
+  - `Register capability` returns a ready mock capability response.
+  - `Run one trial` returns an uploaded mock trial with requested params, applied params, and a mock artifact path.
+- The latest action result is displayed as formatted JSON in the app so test output can be inspected directly.
+- Disabling `Mock mode` uses `NetworkAppClient`, which preserves the existing backend and synthetic encoder path.
+
+Current verification:
+
+- Backend regression tests were rerun after the Android mock UI changes.
+- Result: `Ran 59 tests`, `OK`.
+- Android compilation and installation are still pending because Android command-line tools are unavailable in the current shell.
+
 ## Known Gaps
 
 - Android client has not been compiled in this environment.
 - `adb`, `gradle`, and `sdkmanager` were not available on the current shell `PATH`.
+- Android mock mode has not yet been opened in Android Studio or on a device/emulator from this shell.
 - End-to-end real Android encoding has not been verified.
 - One real Android device artifact upload has not been verified.
 - Android client currently uses a synthetic smoke-test source, not the final target input video source.
@@ -225,6 +251,7 @@ The report includes:
 
 Choose one of these paths:
 
-1. Finish Step 11 by making Android SDK tools available on `PATH`, compiling the Android project, and running one real-device upload.
-2. Implement a backend-only Step 12 mock closed-loop integration while Android device access is pending.
-3. Revisit the backend server framework and switch from the current standard-library server to FastAPI once `.venv`/pip bootstrap is fixed.
+1. Open `android-client/` in Android Studio and run the app with `Mock mode` enabled to visually confirm the button flow and JSON result display.
+2. Finish Step 11 by making Android SDK tools available on `PATH`, compiling the Android project, and running one real-device upload with `Mock mode` disabled.
+3. Implement a backend-only Step 12 mock closed-loop integration while Android device access is pending.
+4. Revisit the backend server framework and switch from the current standard-library server to FastAPI once `.venv`/pip bootstrap is fixed.

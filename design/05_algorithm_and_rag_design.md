@@ -11,6 +11,32 @@ MVP의 목적 함수는 다음 두 개이며, optimizer는 이 trade-off에서 P
 
 Optimizer는 objective 계산만 담당하며, Android capability 해석이나 RAG 문서 해석을 직접 수행하지 않는다.
 
+## AI responsibility boundary
+
+AI/RAG는 다음 권한만 가진다.
+
+- 문서와 trial log를 검색해 constraint 후보를 만든다.
+- 실패 trial의 가능한 원인을 source와 함께 설명한다.
+- 최종 report의 narrative 초안을 만든다.
+- 사람이 읽을 수 있는 제외 사유와 실험 요약을 작성한다.
+
+AI/RAG는 다음 권한을 갖지 않는다.
+
+- 다음 trial의 최종 parameter를 직접 선택하지 않는다.
+- source reference 없이 search space 변경을 요구하지 않는다.
+- capability에 없는 parameter를 supported로 승격하지 않는다.
+- optimizer objective나 Pareto 계산 결과를 임의로 수정하지 않는다.
+
+최종 권한은 다음과 같이 분리한다.
+
+| 결정 | 담당 |
+| --- | --- |
+| Search space 포함/제외 | ConstraintFilter |
+| 다음 trial parameter 추천 | OptimizerService |
+| Android 적용 시도 | Android Client `EncoderParameterProxy` |
+| Trial 성공/실패와 observation | Backend Trial/Evaluation service |
+| 설명 초안과 source discovery | RagAgentService |
+
 ## Search space
 
 ### 기본 search space
@@ -176,6 +202,19 @@ MVP corpus는 제한적으로 시작한다.
 
 각 source는 retrieval 결과에 source id, 문서명, 섹션 또는 observation id를 포함해야 한다.
 
+### Source quality rule
+
+RAG output은 source quality에 따라 사용 범위가 제한된다.
+
+| Source 상태 | 사용 가능 범위 |
+| --- | --- |
+| 문서 section 또는 observation id가 명확함 | Constraint candidate와 report 근거로 사용 가능 |
+| 문서명만 있고 section이 없음 | Report 참고 설명으로만 사용 |
+| source reference 없음 | 저장은 가능하지만 constraint와 report 근거에서 제외 |
+| trial log만 있고 재현 artifact가 없음 | Failure analysis 후보로만 사용 |
+
+`ConstraintFilter`는 source가 충분해도 capability와 ADR rule을 다시 검증한다.
+
 ### RAG 출력 유형
 
 #### Constraint candidate
@@ -190,6 +229,16 @@ MVP corpus는 제한적으로 시작한다.
 ```
 
 Constraint candidate는 `accepted`를 직접 만들 수 없다. `candidate_decision`은 RAG Agent의 의견이며, 실제 결정은 ConstraintFilter가 `ConstraintDecision`으로 저장한다.
+
+추가 metadata:
+
+```json
+{
+  "rag_output_id": "rag_001",
+  "prompt_version": "constraint_candidate_v1",
+  "retrieval_snapshot_path": "artifacts/sess_001/rag/retrieval_snapshots/rag_001.json"
+}
+```
 
 #### Failure analysis
 
@@ -209,12 +258,53 @@ Constraint candidate는 `accepted`를 직접 만들 수 없다. `candidate_decis
 
 RAG Agent는 최종 리포트의 설명 초안을 생성한다. Backend는 raw metrics, Pareto Set, constraint decision log를 함께 첨부한다.
 
+Report section은 다음 세 가지를 분리해 작성한다.
+
+- `facts`: MetadataStore와 evaluator에서 온 raw metric
+- `derived_results`: Pareto Set, baseline comparison처럼 deterministic service가 계산한 결과
+- `interpretation`: RAG가 source 기반으로 작성한 설명
+
+RAG는 `facts`와 `derived_results`를 재계산하지 않고, 제공받은 값을 설명하는 데만 사용한다.
+
+## RAG processing pipeline
+
+```text
+question/context
+  -> retrieve limited corpus and session logs
+  -> save retrieval snapshot
+  -> generate schema-constrained JSON
+  -> validate JSON schema and source references
+  -> store RagOutput
+  -> ConstraintFilter or ReportService consumes it
+```
+
+이 pipeline은 AI guardrail 단계로도 해석된다.
+
+| 단계 | Guardrail |
+| --- | --- |
+| retrieve limited corpus | corpus allowlist와 source snapshot |
+| generate schema-constrained JSON | output schema 제한 |
+| validate JSON schema and source references | hallucination과 source-less claim 차단 |
+| store RagOutput | prompt/source/audit trail 보존 |
+| ConstraintFilter or ReportService consumes it | action guardrail과 report trust level 적용 |
+
+Failure handling:
+
+- Retrieval 실패: RAG step을 `ignored`로 저장하고 optimizer loop는 계속 진행한다.
+- JSON schema 실패: raw output은 report 근거로 쓰지 않고 error metadata만 남긴다.
+- Source reference 부족: constraint candidate는 rejected decision 후보로만 남긴다.
+- LLM timeout: session은 실패시키지 않고 report에 RAG unavailable 상태를 표시한다.
+
 ## LLM 사용 제한
 
 - LLM은 최종 parameter를 직접 결정하지 않는다.
 - LLM 출력은 사람이 읽는 설명과 constraint 후보로 제한한다.
 - Search space 변경은 structured constraint filter가 결정한다.
 - 모든 RAG 출력은 source reference를 남긴다.
+- Prompt version과 retrieval snapshot을 저장해 RAG 설명을 재검토할 수 있게 한다.
+- RAG narrative는 raw metric이나 Pareto result와 별도 trust level로 report에 표시한다.
+
+AI guardrails와 AI-Ops 적용 범위는 [11_ai_guardrails_and_aiops.md](11_ai_guardrails_and_aiops.md)에서 별도로 정의한다.
 
 ## Session 종료 조건
 

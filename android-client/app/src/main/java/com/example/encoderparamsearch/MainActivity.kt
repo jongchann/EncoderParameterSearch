@@ -6,9 +6,11 @@ import android.os.Handler
 import android.os.Looper
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import org.json.JSONObject
 import java.util.concurrent.Executors
 
 class MainActivity : Activity() {
@@ -26,8 +28,16 @@ class MainActivity : Activity() {
             hint = "Session ID"
             singleLine()
         }
+        val mockMode = CheckBox(this).apply {
+            text = "Mock mode"
+            isChecked = true
+        }
         val status = TextView(this).apply {
             text = "Ready"
+        }
+        val result = TextView(this).apply {
+            text = "No result yet"
+            setTextIsSelectable(true)
         }
         val registerButton = Button(this).apply {
             text = "Register capability"
@@ -40,26 +50,26 @@ class MainActivity : Activity() {
         }
 
         createSessionButton.setOnClickListener {
-            runClientAction(status) {
-                val response = BackendClient(backendUrl.text.toString()).createSession()
+            runClientAction(status, result, "Session created") {
+                val response = client(backendUrl, mockMode).createSession()
                 val createdSessionId = response.getString("session_id")
                 mainHandler.post {
                     sessionId.setText(createdSessionId)
                 }
-                "Session created: $createdSessionId"
+                response
             }
         }
         registerButton.setOnClickListener {
-            runClientAction(status) {
-                client(backendUrl).registerCapability(sessionId.text.toString())
-                "Capability registered"
+            runClientAction(status, result, "Capability registered") {
+                client(backendUrl, mockMode).registerCapability(sessionId.text.toString())
             }
         }
         runTrialButton.setOnClickListener {
-            runClientAction(status) {
-                val runner = client(backendUrl)
-                val response = runner.runOneTrial(sessionId.text.toString(), defaultTrialSource())
-                "Trial uploaded: ${response.optString("status", "ok")}"
+            runClientAction(status, result, "Trial completed") {
+                client(backendUrl, mockMode).runOneTrial(
+                    sessionId.text.toString(),
+                    defaultTrialSource(),
+                )
             }
         }
 
@@ -67,11 +77,13 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setPadding(32, 32, 32, 32)
             addView(backendUrl, fullWidthParams())
+            addView(mockMode, fullWidthParams())
             addView(sessionId, fullWidthParams())
             addView(createSessionButton, fullWidthParams())
             addView(registerButton, fullWidthParams())
             addView(runTrialButton, fullWidthParams())
             addView(status, fullWidthParams())
+            addView(result, fullWidthParams())
         }
         setContentView(layout)
     }
@@ -81,12 +93,12 @@ class MainActivity : Activity() {
         super.onDestroy()
     }
 
-    private fun client(backendUrl: EditText): TrialRunner {
-        return TrialRunner(
-            BackendClient(backendUrl.text.toString()),
-            CapabilityReporter(),
-            EncoderParameterProxy(),
-        )
+    private fun client(backendUrl: EditText, mockMode: CheckBox): AppClient {
+        return if (mockMode.isChecked) {
+            MockAppClient()
+        } else {
+            NetworkAppClient(backendUrl.text.toString())
+        }
     }
 
     private fun defaultTrialSource(): TrialSource {
@@ -103,16 +115,26 @@ class MainActivity : Activity() {
         )
     }
 
-    private fun runClientAction(status: TextView, action: () -> String) {
+    private fun runClientAction(
+        status: TextView,
+        result: TextView,
+        successMessage: String,
+        action: () -> JSONObject,
+    ) {
         status.text = "Running..."
         executor.execute {
-            val message = try {
-                action()
+            val outcome = try {
+                val response = action()
+                ActionOutcome(successMessage, response.toString(2))
             } catch (error: Exception) {
-                "Failed: ${error.message ?: error.javaClass.simpleName}"
+                ActionOutcome(
+                    "Failed",
+                    error.message ?: error.javaClass.simpleName,
+                )
             }
             mainHandler.post {
-                status.text = message
+                status.text = outcome.status
+                result.text = outcome.detail
             }
         }
     }
@@ -124,3 +146,8 @@ class MainActivity : Activity() {
         )
     }
 }
+
+data class ActionOutcome(
+    val status: String,
+    val detail: String,
+)
