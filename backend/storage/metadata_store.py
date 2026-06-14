@@ -14,6 +14,8 @@ JSON_COLUMNS = {
     "trials": {"requested_params", "applied_params", "applied_params_unknown"},
     "optimizer_recommendations": {"recommended_params", "metadata"},
     "report_metadata": {"metadata"},
+    "rag_outputs": {"payload", "sources"},
+    "aiops_events": {"payload"},
 }
 
 ALLOWED_TABLES = {
@@ -26,6 +28,8 @@ ALLOWED_TABLES = {
     "observations",
     "optimizer_recommendations",
     "report_metadata",
+    "rag_outputs",
+    "aiops_events",
 }
 
 

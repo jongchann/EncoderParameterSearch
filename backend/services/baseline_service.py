@@ -1,12 +1,16 @@
+from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
-from backend.models.enums import SessionStatus
+from backend.models.enums import SessionStatus, TrialStatus
 from backend.storage.metadata_store import MetadataStore
 
 
 class BaselineSelectionError(Exception):
     pass
+
+
+MIN_COMPLETION_EVALUATED_TRIALS = 15
 
 
 class BaselineService:
@@ -48,13 +52,33 @@ class BaselineService:
         ):
             raise BaselineSelectionError("Baseline observation is required before completion.")
 
+        evaluated_count = self.store.count_trials_by_status(
+            session_id,
+            TrialStatus.EVALUATED.value,
+        )
+        if evaluated_count < MIN_COMPLETION_EVALUATED_TRIALS:
+            raise BaselineSelectionError(
+                f"At least {MIN_COMPLETION_EVALUATED_TRIALS} evaluated trials are required "
+                "before completion."
+            )
+        if not self._has_final_report(session_id):
+            raise BaselineSelectionError("Final report is required before completion.")
+
+        completed_at = datetime.now(timezone.utc).isoformat()
         self.store.update(
             "sessions",
             "session_id",
             session_id,
-            {"status": SessionStatus.COMPLETED.value},
+            {
+                "status": SessionStatus.COMPLETED.value,
+                "completed_at": completed_at,
+            },
         )
-        return {"session_id": session_id, "status": SessionStatus.COMPLETED.value}
+        return {
+            "session_id": session_id,
+            "status": SessionStatus.COMPLETED.value,
+            "completed_at": completed_at,
+        }
 
     def _select_observation(
         self,
@@ -127,4 +151,10 @@ class BaselineService:
                     "reason": reason,
                 },
             },
+        )
+
+    def _has_final_report(self, session_id: str) -> bool:
+        return any(
+            report["metadata"].get("type") == "final_report"
+            for report in self.store.list("report_metadata", "session_id", session_id)
         )

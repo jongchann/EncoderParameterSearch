@@ -8,7 +8,7 @@ from threading import Thread
 
 from backend.models.enums import SessionStatus, TrialStatus
 from backend.server import make_handler
-from backend.services.report_service import ReportService
+from backend.services.report_service import REPORT_TEMPLATE_VERSION, ReportService
 from backend.storage.artifact_store import ArtifactStore
 from backend.storage.metadata_store import MetadataStore
 
@@ -50,8 +50,15 @@ class ReportServiceTests(unittest.TestCase):
         markdown = report_path.read_text()
 
         self.assertTrue(report_path.exists())
+        self.assertIn("## Report Version Metadata", markdown)
+        self.assertIn("## Trust Level Summary", markdown)
+        self.assertIn("## Raw Metrics", markdown)
+        self.assertIn("## Deterministic Results", markdown)
+        self.assertIn("## AI-assisted Narrative", markdown)
+        self.assertIn("AI-assisted Narrative: not available", markdown)
         self.assertIn("## Pareto Set", markdown)
         self.assertIn("## Baseline Comparison", markdown)
+        self.assertIn("## Audit Trail", markdown)
         self.assertIn("## Optimizer Recommendation Audit Trail", markdown)
         self.assertIn("## Failed Trial Summary", markdown)
 
@@ -65,6 +72,22 @@ class ReportServiceTests(unittest.TestCase):
 
         self.assertEqual(len(final_reports), 1)
         self.assertEqual(final_reports[0]["report_path"], report["report_path"])
+        self.assertEqual(
+            final_reports[0]["metadata"]["report_template_version"],
+            REPORT_TEMPLATE_VERSION,
+        )
+        self.assertEqual(final_reports[0]["metadata"]["search_space_version"], 1)
+        self.assertEqual(final_reports[0]["metadata"]["evaluator_mode"], "mock")
+        self.assertEqual(final_reports[0]["metadata"]["rag_status"], "not_available")
+        self.assertEqual(final_reports[0]["metadata"]["source_less_narrative_count"], 0)
+        self.assertEqual(
+            final_reports[0]["metadata"]["trust_level_counts"],
+            {
+                "raw_metric": 3,
+                "deterministic_derived_result": 2,
+                "ai_assisted_narrative": 0,
+            },
+        )
 
     def test_http_get_report_works(self) -> None:
         with _ServerContext(self.database_path) as client:
@@ -75,6 +98,10 @@ class ReportServiceTests(unittest.TestCase):
         self.assertTrue(Path(response.body["report_path"]).exists())
         self.assertIn("pareto_set", response.body)
         self.assertIn("baseline_comparison", response.body)
+        self.assertEqual(
+            response.body["metadata"]["report_template_version"],
+            REPORT_TEMPLATE_VERSION,
+        )
 
     def _create_session_data(self) -> None:
         self.store.create(
@@ -131,6 +158,9 @@ class ReportServiceTests(unittest.TestCase):
         trial_id = f"trial_{index:03d}"
         optimizer_trial_id = f"opt_{index:03d}"
         requested_params = {"bitrate_kbps": int(bitrate_kbps), "i_frame_interval_sec": 2}
+        evaluation_log_path = self.root / "sess_001" / "trials" / trial_id / "evaluation_log.json"
+        evaluation_log_path.parent.mkdir(parents=True, exist_ok=True)
+        evaluation_log_path.write_text(json.dumps({"mode": "mock"}))
         self.store.create(
             "optimizer_recommendations",
             {
@@ -169,7 +199,7 @@ class ReportServiceTests(unittest.TestCase):
                 "trial_id": trial_id,
                 "bitrate_kbps": bitrate_kbps,
                 "vmaf": vmaf,
-                "evaluation_log_path": "",
+                "evaluation_log_path": str(evaluation_log_path),
                 "is_baseline": is_baseline,
             },
         )

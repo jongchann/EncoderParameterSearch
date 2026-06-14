@@ -13,6 +13,11 @@ from backend.services.session_service import (
     SessionNotReadyError,
     SessionService,
 )
+from backend.services.evaluation_service import (
+    EvaluationService,
+    MockEvaluator,
+    TrialNotEvaluableError,
+)
 from backend.services.report_service import ReportError, ReportService
 from backend.services.trial_service import TrialNotFoundError, TrialService
 from backend.storage.artifact_store import ArtifactStore
@@ -160,6 +165,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                 "pareto_set": response["pareto_set"],
                 "baseline_comparison": response["baseline_comparison"],
                 "report_path": response["report_path"],
+                "metadata": response["metadata"],
             },
         )
 
@@ -170,14 +176,26 @@ class RequestHandler(BaseHTTPRequestHandler):
                 self._read_body(),
             )
             metadata = json.loads(parts["metadata"].decode("utf-8"))
-            response = self._trial_service().upload_result(
+            upload_response = self._trial_service().upload_result(
                 session_id,
                 trial_id,
                 metadata,
                 parts["artifact"],
             )
+            evaluation_response = self._evaluation_service().evaluate_trial(
+                session_id,
+                trial_id,
+            )
+            response = {
+                **upload_response,
+                **evaluation_response,
+                "artifact_path": upload_response["artifact_path"],
+            }
         except TrialNotFoundError:
             self._send_json(404, {"detail": "Trial not found."})
+            return
+        except TrialNotEvaluableError:
+            self._send_json(404, {"detail": "Trial not evaluable."})
             return
         except (KeyError, json.JSONDecodeError, MultipartParseError, TypeError):
             self._send_json(400, {"detail": "Invalid trial result upload."})
@@ -229,6 +247,13 @@ class RequestHandler(BaseHTTPRequestHandler):
         return TrialService(
             MetadataStore(self.database_path),
             ArtifactStore(self.artifact_root),
+        )
+
+    def _evaluation_service(self) -> EvaluationService:
+        return EvaluationService(
+            MetadataStore(self.database_path),
+            ArtifactStore(self.artifact_root),
+            MockEvaluator(),
         )
 
     def _report_service(self) -> ReportService:

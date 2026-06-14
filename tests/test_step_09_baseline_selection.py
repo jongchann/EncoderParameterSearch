@@ -107,23 +107,42 @@ class BaselineSelectionTests(unittest.TestCase):
         with self.assertRaisesRegex(BaselineSelectionError, "Baseline observation"):
             self.service.complete_session("sess_001")
 
-    def test_completed_session_has_baseline_trial_id(self) -> None:
+    def test_cannot_complete_session_without_minimum_evaluated_trials(self) -> None:
         self._create_evaluated_trial(
             "trial_001",
             "obs_001",
-            {"bitrate_kbps": 6500},
+            {"bitrate_kbps": 6500, "preset": "android_default"},
             bitrate_kbps=6500,
             optimizer_trial_id="opt_001",
         )
 
         self.service.select_baseline("sess_001")
+
+        with self.assertRaisesRegex(BaselineSelectionError, "15 evaluated trials"):
+            self.service.complete_session("sess_001")
+
+    def test_cannot_complete_session_without_final_report(self) -> None:
+        self._create_completion_ready_trials()
+
+        self.service.select_baseline("sess_001")
+
+        with self.assertRaisesRegex(BaselineSelectionError, "Final report"):
+            self.service.complete_session("sess_001")
+
+    def test_completed_session_has_baseline_trial_id_and_completed_at(self) -> None:
+        self._create_completion_ready_trials()
+
+        self.service.select_baseline("sess_001")
+        self._create_final_report_metadata()
         response = self.service.complete_session("sess_001")
 
         session = self.store.get("sessions", "session_id", "sess_001")
 
         self.assertEqual(response["status"], SessionStatus.COMPLETED.value)
+        self.assertIsNotNone(response["completed_at"])
         self.assertEqual(session["status"], SessionStatus.COMPLETED.value)
         self.assertEqual(session["baseline_trial_id"], "trial_001")
+        self.assertIsNotNone(session["completed_at"])
 
     def _create_session(self) -> None:
         self.store.create(
@@ -147,6 +166,33 @@ class BaselineSelectionTests(unittest.TestCase):
                     "i_frame_interval_sec": {"type": "number", "min": 1, "max": 5},
                 },
                 "created_from": ["adr_rule", "capability"],
+            },
+        )
+
+    def _create_completion_ready_trials(self) -> None:
+        for index in range(1, 16):
+            requested_params = {"bitrate_kbps": 1000 + index * 400}
+            if index == 1:
+                requested_params["preset"] = "android_default"
+            self._create_evaluated_trial(
+                f"trial_{index:03}",
+                f"obs_{index:03}",
+                requested_params,
+                bitrate_kbps=float(requested_params["bitrate_kbps"]),
+            )
+
+    def _create_final_report_metadata(self) -> None:
+        self.store.create(
+            "report_metadata",
+            {
+                "report_id": "report_001",
+                "session_id": "sess_001",
+                "report_path": "artifacts/sess_001/report.md",
+                "metadata": {
+                    "type": "final_report",
+                    "pareto_count": 3,
+                    "baseline_trial_id": "trial_001",
+                },
             },
         )
 

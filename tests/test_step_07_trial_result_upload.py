@@ -94,11 +94,15 @@ class TrialResultUploadTests(unittest.TestCase):
             )
 
         trial = self.store.get("trials", "trial_id", "trial_001")
+        observations = self.store.list_observations_for_session("sess_001")
 
         self.assertEqual(response.status, 200)
-        self.assertEqual(response.body["status"], "uploaded")
-        self.assertEqual(trial["status"], "uploaded")
+        self.assertEqual(response.body["status"], "evaluated")
+        self.assertEqual(response.body["bitrate_kbps"], 3980.0)
+        self.assertEqual(trial["status"], "evaluated")
         self.assertTrue(Path(trial["artifact_path"]).exists())
+        self.assertEqual(len(observations), 1)
+        self.assertEqual(observations[0]["trial_id"], "trial_001")
 
     def test_http_failure_upload(self) -> None:
         with _ServerContext(self.database_path) as client:

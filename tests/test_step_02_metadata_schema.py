@@ -28,6 +28,8 @@ class MetadataSchemaTests(unittest.TestCase):
             "observations",
             "optimizer_recommendations",
             "report_metadata",
+            "rag_outputs",
+            "aiops_events",
         }
 
         with sqlite3.connect(self.database_path) as connection:
@@ -227,6 +229,58 @@ class MetadataSchemaTests(unittest.TestCase):
 
         report = self.store.get("report_metadata", "report_id", "report_001")
         self.assertEqual(report["metadata"]["sections"], ["pareto_set"])
+
+    def test_rag_output_json_round_trip(self) -> None:
+        self._create_session()
+
+        self.store.create(
+            "rag_outputs",
+            {
+                "rag_output_id": "rag_001",
+                "session_id": "sess_001",
+                "trial_id": None,
+                "output_type": "constraint_candidate",
+                "payload": {
+                    "parameter_name": "b_frame_count",
+                    "candidate_decision": "rejected",
+                    "reason": "Capability did not confirm support.",
+                },
+                "sources": [
+                    {
+                        "source_id": "capability:sess_001",
+                        "source_type": "capability",
+                    }
+                ],
+                "prompt_version": "constraint_candidate_v1",
+                "retrieval_snapshot_path": "artifacts/sess_001/rag/snapshot.json",
+                "status": "recorded",
+            },
+        )
+
+        rag_output = self.store.get("rag_outputs", "rag_output_id", "rag_001")
+        self.assertEqual(rag_output["payload"]["parameter_name"], "b_frame_count")
+        self.assertEqual(rag_output["sources"][0]["source_id"], "capability:sess_001")
+
+    def test_aiops_event_json_round_trip(self) -> None:
+        self._create_session()
+
+        self.store.create(
+            "aiops_events",
+            {
+                "event_id": "aiops_001",
+                "session_id": "sess_001",
+                "component": "rag",
+                "event_type": "guardrail_passed",
+                "severity": "info",
+                "payload": {
+                    "prompt_version": "constraint_candidate_v1",
+                    "source_count": 1,
+                },
+            },
+        )
+
+        event = self.store.get("aiops_events", "event_id", "aiops_001")
+        self.assertEqual(event["payload"]["source_count"], 1)
 
     def test_documented_status_enums_are_available(self) -> None:
         self.assertEqual(

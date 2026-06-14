@@ -45,5 +45,17 @@ class ArtifactStore:
         report_path.write_text(markdown, encoding="utf-8")
         return report_path
 
+    def save_rag_retrieval_snapshot(
+        self,
+        session_id: str,
+        snapshot_id: str,
+        payload: dict[str, Any],
+    ) -> Path:
+        snapshot_directory = self.artifact_root / session_id / "rag" / "retrieval_snapshots"
+        snapshot_directory.mkdir(parents=True, exist_ok=True)
+        snapshot_path = snapshot_directory / f"{snapshot_id}.json"
+        self._write_json(snapshot_path, payload)
+        return snapshot_path
+
     def _write_json(self, path: Path, payload: dict[str, Any]) -> None:
         path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")

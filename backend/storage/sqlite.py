@@ -124,6 +124,34 @@ SCHEMA_STATEMENTS = (
         FOREIGN KEY (session_id) REFERENCES sessions(session_id)
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS rag_outputs (
+        rag_output_id TEXT PRIMARY KEY,
+        session_id TEXT NOT NULL,
+        trial_id TEXT,
+        output_type TEXT NOT NULL,
+        payload TEXT NOT NULL,
+        sources TEXT NOT NULL,
+        prompt_version TEXT NOT NULL,
+        retrieval_snapshot_path TEXT NOT NULL,
+        status TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (session_id) REFERENCES sessions(session_id),
+        FOREIGN KEY (trial_id) REFERENCES trials(trial_id)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS aiops_events (
+        event_id TEXT PRIMARY KEY,
+        session_id TEXT NOT NULL,
+        component TEXT NOT NULL,
+        event_type TEXT NOT NULL,
+        severity TEXT NOT NULL,
+        payload TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+    )
+    """,
 )
 
 
